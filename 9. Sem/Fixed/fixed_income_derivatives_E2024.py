@@ -124,7 +124,7 @@ def spot_rate_bump(T_bump,size_bump,T,R_input,p_input):
         I_bump, idx_bump = value_in_list_returns_I_idx(T_bump,T)
         R[idx_bump] = R[idx_bump] + size_bump
         p[idx_bump] = np.exp(-R[idx_bump]*T_bump)
-    elif type(T_bump) == tuple or type(T_bump) == list or type(T_bump) == np.ndarray or type(T_bump) == np.int32 or type(T_bump) == np.int64:
+    elif type(T_bump) == tuple or type(T_bump) == list or type(T_bump) == np.ndarray:
         if type(size_bump) == int or type(size_bump) == float or type(size_bump) == np.float64:
             for i in range(0,len(T_bump)):
                 I_bump, idx_bump = value_in_list_returns_I_idx(T_bump[i],T)
@@ -143,8 +143,8 @@ def market_rate_bump(idx_bump,size_bump,T_inter,data,interpolation_options = {"m
         data_bump[idx_bump]["rate"] += size_bump
         T_fit_bump, R_fit_bump = zcb_curve_fit(data_bump,interpolation_options = interpolation_options)
         p_inter_bump, R_inter_bump, f_inter_bump, T_inter_bump = zcb_curve_interpolate(T_inter,T_fit_bump,R_fit_bump,interpolation_options = interpolation_options)
-    elif type(idx_bump) == tuple or type(idx_bump) == list or type(idx_bump) == np.ndarray or type(idx_bump) == np.int32 or type(idx_bump) == np.int64:
-        if type(size_bump) == int or type(size_bump) == float or type(size_bump) == np.float64:
+    elif type(idx_bump) == tuple or type(idx_bump) == list or type(idx_bump) == np.ndarray:
+        if type(size_bump) == int or type(size_bump) == float or type(size_bump) == np.float64 or type(size_bump) == np.int32 or type(size_bump) == np.int64:
             for i in range(0,len(idx_bump)):
                 data_bump[idx_bump[i]]["rate"] += size_bump
             T_fit_bump, R_fit_bump = zcb_curve_fit(data_bump,interpolation_options = interpolation_options)
@@ -310,7 +310,7 @@ def ci_cir(r0,a,b,sigma,T,size_ci,type_ci = "two_sided"):
     if type(T) == int or type(T) == float or type(T) == np.float64:
         if type_ci == "lower":
             if T < 1e-6:
-                lb, ub = np.nan, np.nan
+                lb, ub = r0, r0
             else:
                 df = (4*a*b)/sigma**2
                 nc = (4*a*np.exp(-a*T)*r0)/(sigma**2*(1-np.exp(-a*T)))
@@ -318,7 +318,7 @@ def ci_cir(r0,a,b,sigma,T,size_ci,type_ci = "two_sided"):
                 lb, ub = ncx2.ppf(1-size_ci,df,nc)/scaling, np.inf
         elif type_ci == "upper":
             if T < 1e-6:
-                lb, ub = np.nan, np.nan
+                lb, ub = r0, r0
             else:
                 df = (4*a*b)/sigma**2
                 nc = (4*a*np.exp(-a*T)*r0)/(sigma**2*(1-np.exp(-a*T)))
@@ -326,7 +326,7 @@ def ci_cir(r0,a,b,sigma,T,size_ci,type_ci = "two_sided"):
                 lb, ub = 0, ncx2.ppf(size_ci,df,nc)/scaling
         elif type_ci == "two_sided":
             if T < 1e-6:
-                lb, ub = np.nan, np.nan
+                lb, ub = r0, r0
             else:
                 df = (4*a*b)/sigma**2
                 nc = (4*a*np.exp(-a*T)*r0)/(sigma**2*(1-np.exp(-a*T)))
@@ -338,8 +338,7 @@ def ci_cir(r0,a,b,sigma,T,size_ci,type_ci = "two_sided"):
         if type_ci == "lower":
             for i in range(0,N):
                 if T[i] < 1e-6:
-                    lb[i], ub[i] = np.nan, np.nan
-
+                    lb[i], ub[i] = r0, r0
                 else:
                     df = (4*a*b)/sigma**2
                     nc = (4*a*np.exp(-a*T[i])*r0)/(sigma**2*(1-np.exp(-a*T[i])))
@@ -348,7 +347,7 @@ def ci_cir(r0,a,b,sigma,T,size_ci,type_ci = "two_sided"):
         elif type_ci == "upper":
             for i in range(0,N):
                 if T[i] < 1e-6:
-                    lb[i], ub[i] = np.nan, np.nan
+                    lb[i], ub[i] = r0, r0
                 else:
                     df = (4*a*b)/sigma**2
                     nc = (4*a*np.exp(-a*T[i])*r0)/(sigma**2*(1-np.exp(-a*T[i])))
@@ -357,7 +356,7 @@ def ci_cir(r0,a,b,sigma,T,size_ci,type_ci = "two_sided"):
         elif type_ci == "two_sided":
             for i in range(0,N):
                 if T[i] < 1e-6:
-                    lb[i], ub[i] = np.nan, np.nan
+                    lb[i], ub[i] = r0, r0
                 else:
                     df = (4*a*b)/sigma**2
                     nc = (4*a*np.exp(-a*T[i])*r0)/(sigma**2*(1-np.exp(-a*T[i])))
@@ -505,8 +504,8 @@ def ci_vasicek(r0,a,b,sigma,T,size_ci,type_ci = "two_sided"):
     if type(T) == int or type(T) == float or type(T) == np.int32 or type(T) == np.int64 or type(T) == np.float64:
         if type_ci == "lower":
             z = norm.ppf(size_ci,0,1)
-            if T < 1e-10:
-                lb, ub = np.nan, np.nan
+            if T < 1e-6:
+                lb, ub = r0, r0
             elif T == np.inf:
                 mean = b/a
                 std = np.sqrt(sigma**2/(2*a))
@@ -517,8 +516,8 @@ def ci_vasicek(r0,a,b,sigma,T,size_ci,type_ci = "two_sided"):
                 lb, ub = mean - z*std, np.inf
         elif type_ci == "upper":
             z = norm.ppf(size_ci,0,1)
-            if T < 1e-10:
-                lb, ub = np.nan, np.nan
+            if T < 1e-6:
+                lb, ub = r0, r0
             elif T == np.inf:
                 mean = b/a
                 std = np.sqrt(sigma**2/(2*a))
@@ -529,8 +528,8 @@ def ci_vasicek(r0,a,b,sigma,T,size_ci,type_ci = "two_sided"):
                 lb, ub = -np.inf, mean + z*std
         elif type_ci == "two_sided":
             z = norm.ppf(size_ci + 0.5*(1-size_ci),0,1)
-            if T < 1e-10:
-                lb, ub = np.nan, np.nan
+            if T < 1e-6:
+                lb, ub = r0, r0
             elif T == np.inf:
                 mean = b/a
                 std = np.sqrt(sigma**2/(2*a))
@@ -546,8 +545,8 @@ def ci_vasicek(r0,a,b,sigma,T,size_ci,type_ci = "two_sided"):
         if type_ci == "lower":
             z = norm.ppf(size_ci,0,1)
             for i in range(0,N):
-                if T[i] < 1e-10:
-                    lb[i], ub[i] = np.nan, np.nan
+                if T[i] < 1e-6:
+                    lb[i], ub[i] = r0, r0
                 else:
                     mean = r0*np.exp(-a*T[i]) + b/a*(1-np.exp(-a*T[i]))
                     std = np.sqrt(sigma**2/(2*a)*(1-np.exp(-2*a*T[i])))
@@ -555,8 +554,8 @@ def ci_vasicek(r0,a,b,sigma,T,size_ci,type_ci = "two_sided"):
         elif type_ci == "upper":
             z = norm.ppf(size_ci,0,1)
             for i in range(0,N):
-                if T[i] < 1e-10:
-                    lb[i], ub[i] = np.nan, np.nan
+                if T[i] < 1e-6:
+                    lb[i], ub[i] = r0, r0
                 else:
                     mean = r0*np.exp(-a*T[i]) + b/a*(1-np.exp(-a*T[i]))
                     std = np.sqrt(sigma**2/(2*a)*(1-np.exp(-2*a*T[i])))
@@ -564,8 +563,8 @@ def ci_vasicek(r0,a,b,sigma,T,size_ci,type_ci = "two_sided"):
         elif type_ci == "two_sided":
             z = norm.ppf(size_ci + 0.5*(1-size_ci),0,1)
             for i in range(0,N):
-                if T[i] < 1e-10:
-                    lb[i], ub[i] = np.nan, np.nan
+                if T[i] < 1e-6:
+                    lb[i], ub[i] = r0, r0
                 else:
                     mean = r0*np.exp(-a*T[i]) + b/a*(1-np.exp(-a*T[i]))
                     std = np.sqrt(sigma**2/(2*a)*(1-np.exp(-2*a*T[i])))
@@ -625,93 +624,58 @@ def fit_vasicek_no_sigma_obj(param,sigma,R_star,T,scaling = 1):
         y += scaling*(R_fit[m] - R_star[m])**2
     return y
 
-# # Fitting the initial term structure of forward rates (For use in the Ho-Lee and Hull-White extended Vasicek models)
-# def theta(t,sigma,args):
-#     if args["model"] == "nelson-siegel":
-#         a = args["a"]
-#         b = args["b"]
-#         if type(t) == int or type(t) == float or type(t) == np.int32 or type(t) == np.int64 or type(t) == np.float64:
-#             K = len(a)
-#             theta = -a[0]*b[0]*np.exp(-b[0]*t) + sigma**2*t
-#             for k in range(1,K):
-#                 theta += a[k]*k*t**(k-1)*np.exp(-b[k]*t) - a[k]*b[k]*t**k*np.exp(-b[k]*t)
-#         elif type(t) == tuple or type(t) == list or type(t) == np.ndarray:
-#             K = len(a)
-#             M = len(t)
-#             theta = np.zeros([M])
-#             for m in range(0,M):
-#                 theta[m] = -a[0]*b[0]*np.exp(-b[0]*t[m]) + sigma**2*t[m]
-#                 for k in range(1,K):
-#                     theta[m] += a[k]*k*t[m]**(k-1)*np.exp(-b[k]*t[m]) - a[k]*b[k]*t[m]**k*np.exp(-b[k]*t[m])
-#     if args["model"] == "interpolation":
-#         # Takes a vector theta on some grid T an expands that vector to the grid in t by linear interpolation
-#         T = args["T"]
-#         theta_star = args["theta_star"]
-#         M, N = len(t), len(T)
-#         theta = np.zeros([M])
-#         i, j = 0, 0
-#         while i < M:
-#             while j < N:
-#                 if t[i] < T[j]:
-#                     print(f"WARNING! Not able to compute theta for t: {t[i]}. t less than T, t: {t[i]}, T: {T[j]}")
-#                     i += 1
-#                 elif T[j] <= t[i] <= T[j+1]:
-#                     w_right = (t[i] - T[j])/(T[j+1]-T[j])
-#                     theta[i] = w_right*theta_star[j+1] + (1-w_right)*theta_star[j]
-#                     if i + 1 > M - 1:
-#                         j = N
-#                     i += 1
-#                 elif t[i] > T[j+1]:
-#                     if j + 1 > N - 1:
-#                         print(f"WARNING! Not able to compute theta for t: {t[i]}. t greater than T, t: {t[i]}, T: {T[j]}")
-#                     else:
-#                         j += 1
-#     return theta
-
 # Ho-Lee model
-def euro_option_price_ho_lee(K,T1,T2,p_T1,p_T2,sigma,type = "call"):
-    sigma_p = sigma*(T2-T1)*np.sqrt(T1)
-    d1 = (np.log(p_T2/(p_T1*K)))/sigma_p + 0.5*sigma_p
-    d2 = d1 - sigma_p
-    if type == "call":
-        price = p_T2*ndtr(d1) - p_T1*K*ndtr(d2)
-    elif type == "put":
-        price = p_T1*K*ndtr(-d2) - p_T2*ndtr(-d1)
-    return price
+def theta_ho_lee(t,f_T,sigma):
+    if type(t) == int or type(t) == float or type(t) == np.int32 or type(t) == np.int64 or type(t) == np.float64:
+        theta = f_T + sigma**2*t
+    elif type(t) == tuple or type(t) == list or type(t) == np.ndarray:
+        N = len(t)
+        theta = np.zeros(N)
+        for n in range(0,N):
+            theta[n] = f_T[n] + sigma**2*t[n]
+    return theta
 
-def caplet_prices_ho_lee(sigma,strike,T,p):
-    price_caplet = np.zeros([len(T)])
-    for i in range(2,len(T)):
-        price_caplet[i] = (1 + (T[i]-T[i-1])*strike)*euro_option_price_ho_lee(1/(1 + (T[i]-T[i-1])*strike),T[i-1],T[i],p[i-1],p[i],sigma,type = "put")
-    return price_caplet
+def zcb_price_ho_lee(t,T,r,sigma,T_star,p_star,f_star):
+    if type(T) == tuple or type(T) == list or type(T) == np.ndarray:
+        N = len(T)
+        p = N*[None]
+        for i in range(0,N):
+            p_t = for_values_in_list_find_value_return_value(t,T_star,p_star)
+            p_T = for_values_in_list_find_value_return_value(T[i],T_star,p_star)
+            p[i] = (p_T/p_t)*np.exp((T[i]-t)*(f_star-r) - (sigma**2/2)*t*(T[i]-t)**2)
+    elif type(T) == int or type(T) == float or type(T) == np.int32 or type(T) == np.int64 or type(T) == np.float64:
+        p_t = for_values_in_list_find_value_return_value(t,T_star,p_star)
+        p_T = for_values_in_list_find_value_return_value(T,T_star,p_star)
+        p = (p_T/p_t)*np.exp((T-t)*(f_star-r) - (sigma**2/2)*t*(T-t)**2)
+    return np.array(p)
+
+def mean_var_ho_lee(f,sigma,T):
+    if type(T) == int or type(T) == float or type(T) == np.int32 or type(T) == np.int64 or type(T) == np.float64:
+        mean, var = f + 0.5*sigma**2*T, sigma**2*T
+    elif type(T) == tuple or type(T) == list or type(T) == np.ndarray:
+        N = len(T)
+        mean, var = np.zeros(N), np.zeros(N)
+        for i in range(0,N):
+            mean[i], var[i] = f[i] + 0.5*sigma**2*T[i], sigma**2*T[i]
+    return mean, var
 
 def ci_ho_lee(f,sigma,T,size_ci,type_ci = "two_sided"):
-
     if type(T) == int or type(T) == float or type(T) == np.int32 or type(T) == np.int64 or type(T) == np.float64:
         if type_ci == "lower":
+            mean = f + 0.5*sigma**2*T
+            std = sigma*np.sqrt(T)
             z = norm.ppf(size_ci,0,1)
-            if T < 1e-10:
-                lb, ub = np.nan, np.nan
-            else:
-                mean = f + 0.5*sigma**2*T
-                std = sigma*np.sqrt(T)
-                lb, ub = mean - z*std, np.inf
+            lb, ub = mean - z*std, np.inf
         elif type_ci == "upper":
+            mean = f + 0.5*sigma**2*T
+            std = sigma*np.sqrt(T)
             z = norm.ppf(size_ci,0,1)
-            if T < 1e-10:
-                lb, ub = np.nan, np.nan
-            else:
-                mean = f + 0.5*sigma**2*T
-                std = sigma*np.sqrt(T)
-                lb, ub = -np.inf, mean + z*std
+            lb, ub = -np.inf, mean + z*std
         elif type_ci == "two_sided":
+            mean = f + 0.5*sigma**2*T
+            std = sigma*np.sqrt(T)
             z = norm.ppf(size_ci + 0.5*(1-size_ci),0,1)
-            if T < 1e-10:
-                lb, ub = np.nan, np.nan
-            else:
-                mean = f + 0.5*sigma**2*T
-                std = sigma*np.sqrt(T)
-                lb, ub = mean - z*std, mean + z*std
+            lb, ub = mean - z*std, mean + z*std
         print(f"type_ci: {type_ci}, z: {z}")
     elif type(T) == tuple or type(T) == list or type(T) == np.ndarray:
         N = len(T)
@@ -719,30 +683,21 @@ def ci_ho_lee(f,sigma,T,size_ci,type_ci = "two_sided"):
         if type_ci == "lower":
             z = norm.ppf(size_ci,0,1)
             for i in range(0,N):
-                if T[i] < 1e-10:
-                    lb[i], ub[i] = np.nan, np.nan
-                else:
-                    mean = f[i] + 0.5*sigma**2*T[i]
-                    std = sigma*np.sqrt(T[i])
-                    lb[i], ub[i] = mean - z*std, np.inf
+                mean = f[i] + 0.5*sigma**2*T[i]
+                std = sigma*np.sqrt(T[i])
+                lb[i], ub[i] = mean - z*std, np.inf
         elif type_ci == "upper":
             z = norm.ppf(size_ci,0,1)
             for i in range(0,N):
-                if T[i] < 1e-10:
-                    lb[i], ub[i] = np.nan, np.nan
-                else:
-                    mean = f[i] + 0.5*sigma**2*T[i]
-                    std = sigma*np.sqrt(T[i])
-                    lb[i], ub[i] = -np.inf, mean + z*std
+                mean = f[i] + 0.5*sigma**2*T[i]
+                std = sigma*np.sqrt(T[i])
+                lb[i], ub[i] = -np.inf, mean + z*std
         elif type_ci == "two_sided":
             z = norm.ppf(size_ci + 0.5*(1-size_ci),0,1)
             for i in range(0,N):
-                if T[i] < 1e-10:
-                    lb[i], ub[i] = np.nan, np.nan
-                else:
-                    mean = f[i] + 0.5*sigma**2*T[i]
-                    std = sigma*np.sqrt(T[i])
-                    lb[i], ub[i] = mean - z*std, mean + z*std
+                mean = f[i] + 0.5*sigma**2*T[i]
+                std = sigma*np.sqrt(T[i])
+                lb[i], ub[i] = mean - z*std, mean + z*std
     else:
         print(f"T is not of recognized type")
         lb,ub = False, False
@@ -767,6 +722,109 @@ def simul_ho_lee(r0,f_T,sigma,T,method = "euler",f = None,seed = None):
         for m in range(1,M):
             r[m] = r[m-1] + (f_T[m-1] + sigma**2*(m-1)*delta)*delta + sigma*delta_sqrt*Z[m-1]
     return r
+
+def euro_option_price_ho_lee(K,T1,T2,p_T1,p_T2,sigma,type = "call"):
+    sigma_p = sigma*(T2-T1)*np.sqrt(T1)
+    d1 = (np.log(p_T2/(p_T1*K)))/sigma_p + 0.5*sigma_p
+    d2 = d1 - sigma_p
+    if type == "call":
+        price = p_T2*ndtr(d1) - p_T1*K*ndtr(d2)
+    elif type == "put":
+        price = p_T1*K*ndtr(-d2) - p_T2*ndtr(-d1)
+    return price
+
+def caplet_prices_ho_lee(strike,sigma,T,p):
+    price_caplet = np.zeros([len(T)])
+    for i in range(2,len(T)):
+        price_caplet[i] = (1 + (T[i]-T[i-1])*strike)*euro_option_price_ho_lee(1/(1 + (T[i]-T[i-1])*strike),T[i-1],T[i],p[i-1],p[i],sigma,type = "put")
+    return price_caplet
+
+# Hull-White Extended Vasicek
+def theta_hwev(t,f,f_T,a,sigma):
+    if type(t) == int or type(t) == float or type(t) == np.int32 or type(t) == np.int64 or type(t) == np.float64:
+        theta = f_T + (sigma**2/a)*(np.exp(-a*t)-np.exp(-2*a*t)) + a*(f + 0.5*(sigma/a)**2*(1-np.exp(-a*t))**2)
+    elif type(t) == tuple or type(t) == list or type(t) == np.ndarray:
+        N = len(t)
+        theta = np.zeros(N)
+        for n in range(0,N):
+            theta[n] = f_T[n] + (sigma**2/a)*(np.exp(-a*t[n])-np.exp(-2*a*t[n])) + a*(f[n] + 0.5*(sigma/a)**2*(1-np.exp(-a*t[n]))**2)
+    return theta
+
+def zcb_price_hwev(t,T,r,a,sigma,T_star,p_star,f_star):
+    if type(T) == tuple or type(T) == list or type(T) == np.ndarray:
+        N = len(T)
+        p = N*[None]
+        for i in range(0,N):
+            p_t = for_values_in_list_find_value_return_value(t,T_star,p_star)
+            p_T = for_values_in_list_find_value_return_value(T[i],T_star,p_star)
+            B = (1-np.exp(-a*(T[i]-t)))/a
+            p[i] = (p_T/p_t)*np.exp(B*(f_star-r) - (sigma**2/(4*a))*B**2*(1-np.exp(-2*a*t)))
+    elif type(T) == int or type(T) == float or type(T) == np.int32 or type(T) == np.int64 or type(T) == np.float64:
+        p_t = for_values_in_list_find_value_return_value(t,T_star,p_star)
+        p_T = for_values_in_list_find_value_return_value(T,T_star,p_star)
+        B = (1-np.exp(-a*(T-t)))/a
+
+        p = (p_T/p_t)*np.exp(B*(f_star-r) - (sigma**2/(4*a))*B**2*(1-np.exp(-2*a*t)))
+    return np.array(p)
+
+def mean_var_hwev(a,sigma,T,f,f_T):
+    N = len(T)
+    mean, var, integral = np.zeros(N), np.zeros(N), np.zeros(N)
+    mean[0] = f[0]
+    for n in range(1,N):
+        var[n] = sigma**2*(1-np.exp(-2*a*(T[n]-T[0])))/(2*a)
+        integral[n] = integral[n-1] + 0.5*np.exp(a*T[n-1])*(f_T[n-1] + (sigma**2/a)*(np.exp(-a*T[n-1])-np.exp(-2*a*T[n-1])) + a*(f[n-1] + 0.5*(sigma/a)**2*(1-np.exp(-a*T[n-1]))**2))*(T[n]-T[n-1]) + 0.5*np.exp(a*T[n])*(f_T[n] + (sigma**2/a)*(np.exp(-a*T[n])+np.exp(-2*a*T[n])) + a*(f[n] + 0.5*(sigma/a)**2*(1-np.exp(-a*T[n]))**2))*(T[n]-T[n-1])
+        # integral[n] = integral[n-1] + 0.5*np.exp(a*T[n-1])*(f_T[n-1] + (sigma**2/a)*(np.exp(-a*T[n-1])+np.exp(-2*a*T[n-1])) + a*(f[n-1] + 0.5*(sigma/a)**2*(1-np.exp(-a*T[n-1]))**2))*(T[n]-T[n-1]) + 0.5*np.exp(a*T[n])*(f_T[n] + (sigma**2/a)*(np.exp(-a*T[n])+np.exp(-2*a*T[n])) + a*(f[n] + 0.5*(sigma/a)**2*(1-np.exp(-a*T[n]))**2))*(T[n]-T[n-1])
+        mean[n] = np.exp(-a*(T[n]-T[0]))*f[0] + np.exp(-a*T[n])*integral[n]
+    return mean, var
+
+def ci_hwev(a,sigma,T,f,f_T,size_ci,type_ci = "two_sided"):
+    mean, var = mean_var_hwev(a,sigma,T,f,f_T)
+    N = len(T)
+    lb, ub = np.zeros([N]), np.zeros([N])
+    if type_ci == "lower":
+        z = norm.ppf(size_ci,0,1)
+        for n in range(0,N):
+            lb[n], ub[n] = mean[n] - z*np.sqrt(var[n]), np.inf
+    elif type_ci == "upper":
+        z = norm.ppf(size_ci,0,1)
+        for n in range(0,N):
+            lb[n], ub[n] = -np.inf, mean[n] + z*np.sqrt(var[n])
+    elif type_ci == "two_sided":
+        z = norm.ppf(size_ci + 0.5*(1-size_ci),0,1)
+        for n in range(0,N):
+            lb[n], ub[n] = mean[n] - z*np.sqrt(var[n]), mean[n] + z*np.sqrt(var[n])
+    return lb, ub
+
+def simul_hwev(r0,t,theta,a,sigma,method = "euler",seed = None):
+    if seed is not None:
+        np.random.seed(seed)
+    M = len(t)
+    delta = t[-1]/M
+    delta_sqrt = np.sqrt(delta)
+    Z = np.random.standard_normal(M)
+    if method == "euler":
+        r = np.zeros(M)
+        r[0] = r0
+        for m in range(1,M):
+            r[m] = r[m-1] + (theta[m-1] - a*r[m-1])*delta + sigma*delta_sqrt*Z[m-1]
+    return r
+
+def euro_option_price_hwev(K,T1,T2,p_T1,p_T2,a,sigma,type = "call"):
+    sigma_p = (sigma/a)*(1-np.exp(-a*(T2-T1)))*np.sqrt((1-np.exp(-2*a*T1))/(2*a))
+    d1 = (np.log(p_T2/(p_T1*K)))/sigma_p + 0.5*sigma_p
+    d2 = d1 - sigma_p
+    if type == "call":
+        price = p_T2*ndtr(d1) - p_T1*K*ndtr(d2)
+    elif type == "put":
+        price = p_T1*K*ndtr(-d2) - p_T2*ndtr(-d1)
+    return price
+
+def caplet_prices_hwev(strike,a,sigma,T,p):
+    price_caplet = np.zeros([len(T)])
+    for i in range(2,len(T)):
+        price_caplet[i] = (1 + (T[i]-T[i-1])*strike)*euro_option_price_hwev(1/(1 + (T[i]-T[i-1])*strike),T[i-1],T[i],p[i-1],p[i],a,sigma,type = "put")
+    return price_caplet
 
 # Nelson-Siegel function
 def F_ns(param,T):
@@ -1039,11 +1097,17 @@ def find_value_return_value(val,L1,L2,precision = 10e-8):
 
 def for_values_in_list_find_value_return_value(L1,L2,L3,precision = 10e-8):
     # For all 'item' in L1, this function searches for 'item' in L2 and returns the value corresponding to same index from 'L3'.
-    output = len(L1)*[None]
-    for i, item in enumerate(L1):
-        Ind, output_temp = find_value_return_value(item,L2,L3,precision)
+    if type(L1) == int or type(L1) == float or type(L1) == np.float64 or type(L1) == np.int32 or type(L1) == np.int64:
+        output = None
+        Ind, output_temp = find_value_return_value(L1,L2,L3,precision)
         if Ind == True:
-            output[i] = output_temp[0][1]
+            output = output_temp[0][1]
+    elif type(L1) == tuple or type(L1) == list or type(L1) == np.ndarray:
+        output = len(L1)*[None]
+        for i, item in enumerate(L1):
+            Ind, output_temp = find_value_return_value(item,L2,L3,precision)
+            if Ind == True:
+                output[i] = output_temp[0][1]
     return output
 
 # ZCB curvefitting
@@ -1470,3 +1534,46 @@ def value_in_list_of_dict_returns_I_idx(value,L,name,precision = 1e-12):
             output = True, item
             break
     return output
+
+# # Fitting the initial term structure of forward rates (For use in the Ho-Lee and Hull-White extended Vasicek models)
+# def theta(t,sigma,args):
+#     if args["model"] == "nelson-siegel":
+#         a = args["a"]
+#         b = args["b"]
+#         if type(t) == int or type(t) == float or type(t) == np.int32 or type(t) == np.int64 or type(t) == np.float64:
+#             K = len(a)
+#             theta = -a[0]*b[0]*np.exp(-b[0]*t) + sigma**2*t
+#             for k in range(1,K):
+#                 theta += a[k]*k*t**(k-1)*np.exp(-b[k]*t) - a[k]*b[k]*t**k*np.exp(-b[k]*t)
+#         elif type(t) == tuple or type(t) == list or type(t) == np.ndarray:
+#             K = len(a)
+#             M = len(t)
+#             theta = np.zeros([M])
+#             for m in range(0,M):
+#                 theta[m] = -a[0]*b[0]*np.exp(-b[0]*t[m]) + sigma**2*t[m]
+#                 for k in range(1,K):
+#                     theta[m] += a[k]*k*t[m]**(k-1)*np.exp(-b[k]*t[m]) - a[k]*b[k]*t[m]**k*np.exp(-b[k]*t[m])
+#     if args["model"] == "interpolation":
+#         # Takes a vector theta on some grid T an expands that vector to the grid in t by linear interpolation
+#         T = args["T"]
+#         theta_star = args["theta_star"]
+#         M, N = len(t), len(T)
+#         theta = np.zeros([M])
+#         i, j = 0, 0
+#         while i < M:
+#             while j < N:
+#                 if t[i] < T[j]:
+#                     print(f"WARNING! Not able to compute theta for t: {t[i]}. t less than T, t: {t[i]}, T: {T[j]}")
+#                     i += 1
+#                 elif T[j] <= t[i] <= T[j+1]:
+#                     w_right = (t[i] - T[j])/(T[j+1]-T[j])
+#                     theta[i] = w_right*theta_star[j+1] + (1-w_right)*theta_star[j]
+#                     if i + 1 > M - 1:
+#                         j = N
+#                     i += 1
+#                 elif t[i] > T[j+1]:
+#                     if j + 1 > N - 1:
+#                         print(f"WARNING! Not able to compute theta for t: {t[i]}. t greater than T, t: {t[i]}, T: {T[j]}")
+#                     else:
+#                         j += 1
+#     return theta
