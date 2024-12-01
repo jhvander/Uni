@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<link rel="stylesheet" type="text/css" href="oxdoc-noicons.css">
+<link rel="stylesheet" type="text/css" media="print" href="print.css">
+<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<title>GMM Package 3.7</title>
+</head>
+<body>
+<h1><span class="text">GMM Package 3.7 for OxPack</span></h1>
+
+
+<a name="BootstrapARCH"></a>
+<h2><span class="text">Introduction</span></h2>
+
+OxPack user interface for simple linear and non-linear GMM estimation.
+
+<dl><dt class="author">Author:</dt><dd class="author">  Heino Bohn Nielsen, University of Copenhagen, heino.bohn.nielsen@econ.ku.dk.         
+</dd>
+<dt class="comments">Comments:</dt><dd class="comments">Revision history:
+  <pre>
+     2017/04/12, 3.7  : small bug-fix in counting parameters.
+     2017/02/03, 3.6b : made initial values non-zero.
+     2016/12/12, 3.6  : made sample-selection persistent and changed model information.
+     2016/07/03, 3.5  : added a test for subsets of moment conditions.
+     2016/06/23, 3.4  : only one estimation method per round. changes to organization of output.
+     2016/06/22, 3.3  : added help file.
+     2016/06/16, 3.2  : changed parameter names from a[] to {} and default selection type.
+     2016/06/14, 3.1  : allow linear GMM without code window and improved "store residuals".
+     2016/06/14, 3.0  : changed from systemcall() to OxPackOxRun.
+  </pre>
+</dd>
+</dl>
+<table class="method_table">
+<tr><td colspan="3" class="header" valign="top">Links:</td></tr><tr class="even">
+<td class="declaration"><a href="GMM.html#Formulate">Formulate</a></td>
+<td class="modifiers"></td>
+<td class="description">Formulate window.</td>
+</tr>
+<tr class="odd">
+<td class="declaration"><a href="GMM.html#Model_settings">Model Settings</a></td>
+<td class="modifiers"></td>
+<td class="description">Select estimators and settings for weight-matrix.</td>
+</tr>
+<tr class="even">
+<td class="declaration"><a href="GMM.html#Estimate">Estimate</a></td>
+<td class="modifiers"></td>
+<td class="description">Select estimation sample.</td>
+</tr>
+<tr class="odd">
+<td class="declaration"><a href="GMM.html#Specify_moment_conditions">Specify Moment Conditions</a></td>
+<td class="modifiers"></td>
+<td class="description">Specify moment conditions for estimation.</td>
+</tr>
+<tr class="even">
+<td class="declaration"><a href="GMM.html#Store_residual_in_database">Store Residual in Database</a></td>
+<td class="modifiers"></td>
+<td class="description">Store residuals.</td>
+</tr>
+</table>
+
+<a name="Formulate"></a>
+<h2><span class="text">Formulate</span></h2>
+
+<dl><dd>
+
+Mark variables in the databse list that you wish to include in the new model or add to the
+existing model.
+<br><br>
+Press &lt;&lt; or double-click to add the variable.
+<br><br>
+Lags may be added as specified in the lags setting. Leads are added as minus lags.
+<br><br>
+A constant and a trend may be added from the lower window.
+
+</dd>
+</dl>
+</dd></dl>
+
+<a name="Model_settings"></a>
+<h2><span class="text">Model Settings</span></h2>
+
+<dl><dd>
+Select settings for GMM-estimation.
+
+<dl><dt class="parameters">Settings:</dt><dd class="parameters">
+<table class="parameter_table">
+<tr>
+<td class="declaration" valign="baseline">Estimators</td>
+<td class="description" valign="baseline">Select the  estimator you want to calculate ( 1-step / 2-step / iterated / CU ).</td>
+</tr>
+
+<tr>
+<td class="declaration" valign="baseline">Weight Matrix estimation</td>
+<td class="description" valign="baseline">Choose weight matrix for GMM ( IID / HC / HAC ).</td>
+</tr>
+
+<tr>
+<td class="declaration" valign="baseline">HAC Kernel Setting</td>
+<td class="description" valign="baseline">Select HAC-kernel ( Bartlett / Quadratic Spectral / Parzen / Truncated ).</td>
+</tr>
+
+<tr>
+<td class="declaration" valign="baseline">HAC kernel bandwidth</td>
+<td class="description" valign="baseline">Select lag-length called bandwidth for the HAC kernel ( automatic / manual ).</td>
+</tr>
+
+<tr>
+<td class="declaration" valign="baseline">Other settings</td>
+<td class="description" valign="baseline">Select the maximum number of interations for the iterative estimator.</td>
+</tr>
+
+<tr>
+<td class="declaration" valign="baseline">Linear model</td>
+<td class="description" valign="baseline">If the model is linear, the code window may be skipped.</td>
+</tr>
+
+<tr>
+<td class="declaration" valign="baseline">Subset test</td>
+<td class="description" valign="baseline">Test subsets of moment conditions.</td>
+</tr>
+
+</table>
+</dd>
+</dl>
+</dd></dl>
+
+
+
+<a name="Estimate"></a>
+<h2><span class="text">Estimate</span></h2>
+
+<dl><dd>
+Select estimation sample.
+</dd>
+</dl>
+</dd></dl>
+
+
+
+<a name="Specify_moment_conditions"></a>
+<h2><span class="text">Specify Moment Conditions</span></h2>
+
+<dl><dd>
+Specify the moment conditions for estimation.
+<br>
+As an example, the linear model
+<span class="equation">$$Y_t = X_t^{\prime} \beta + \epsilon_t,\quad t=1,2,...,T,$$</span>
+has
+<span class="expression">\(K\)</span>
+parameters to be estimated. Assume that the regressors in
+<span class="expression">\(X_t\)</span>
+are endogenous, such that
+<span class="equation">$$E(X_t\epsilon_t)\neq 0.$$</span>
+Estimation is based on 
+<span class="expression">\(R\)</span>
+instruments
+<span class="expression">\(Z_t\)</span>
+that may include components from
+<span class="expression">\(X_t\)</span>
+and the 
+<span class="expression">\(R\)</span>
+population moment conditions given by
+<span class="equation">$$E(Z_t\epsilon_t)=E(Z_t (Y_t-X_t^{\prime}\beta) )= 0,$$</span>
+with corresponding sample-moment conditions given by
+<span class="equation">$$g_T(\beta ) = \sum_{t=1}^T g(\beta ,W_t) = \sum_{t=1}^T Z_t(Y_t-X_t^{\prime}\beta).$$</span>
+Here
+<span class="expression">\(W_t=(Y_t:X_t:Z_t)\)</span>
+denotes all variables used in the specification of the moment conditions, and
+<span class="expression">\(g(\beta ,W_t)\)</span>
+denotes the moment contribution from observation
+<span class="expression">\(t\).</span>
+<br><br>
+In the GMM package you should specify the
+<span class="expression">\(T\times R\)</span>
+matrix of moment contributions,
+<span class="equation">$$( g(\beta ,W_1) : ... : g(\beta ,W_t) : ... : g(\beta ,W_T) )^{\prime}.$$</span>
+The program supplies information of the chosen variables, as e.g.
+<dd class="example">
+<pre>
+         Model     Instr.
+         Y[ 0]  =  Z[ 0]  =  y
+         Y[ 1]  =  Z[ 1]  =  Constant
+         Y[ 2]            =  x
+                   Z[ 2]  =  z
+</pre>
+</dd>
+<dl><dd>
+where all vectors Y[] and Z[] are 
+<span class="expression">\(T\times 1\)</span>.
+The moment contributions may then be specified as
+<dd class="example">
+<pre>
+         Uvec = Y[0] - {Beta_1}*Y[1] - {Beta_2}*Y[2];
+         Gmat = Uvec .* ( Z[0] ~ Z[1] ~ Z[2] );
+</pre>
+</dd>
+<dl><dd>
+where Uvec is the
+<span class="expression">\(T\times 1\)</span>
+vector of residuals, and Gmat is the
+<span class="expression">\(T\times 3\)</span>
+matrix of moment contributions.
+<br><br>
+Observe the elementwise multiplication .* allowing
+multiplication of each term in the
+<span class="expression">\(T\times 1\)</span>
+vector Uvec and the
+<span class="expression">\(T\times 3\)</span>
+matrix of instruments.
+<br><br>
+Also observe that parameter names can be changes as long as they are enclosed in curly bracket.
+<br><br>
+Each line should be ended with a semicolon.
+<br><br>
+The variable Uvec is only needed for IID weight matrix estimation.
+In other cases it is sufficient to specify Gmat.
+<br><br>
+Other intermediate variables may be defined as long as they are declared. As an example:
+<dd class="example">
+<pre>
+         decl fitted = {Beta_1}*Y[1] + {Beta_2}*Y[2];
+         decl Inst   = ( Z[0] ~ Z[1] ~ Z[2] );
+
+         Uvec        = Y[0] - fitted;
+         Gmat        = Uvec .* Inst;
+</pre>
+</dd>
+</dl>
+</dd></dl>
+
+<div class="footer">
+Generated by <a href="http://oxdoc.sourceforge.net">oxdoc 1.1-beta</a> &copy Copyright 2005-2014 by Y. Zwols<br>
+Math typesetting by <a href="http://www.mathjax.org/">Mathjax</a>
+</div>

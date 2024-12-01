@@ -1,0 +1,100 @@
+---
+title: "Mandatory Assignment 1"
+author: "Emil H. Erbas, Jeppe Vanderhaegen and Jacob G. Vestergaard"
+date: "08/03/2024"
+execute: 
+  echo: false
+  warning: false
+format:
+  pdf: 
+    number-sections: false
+    colorlinks: true
+    geometry:
+      - top=20mm
+      - left=20mm
+      - bottom=20mm
+      - right=20mm
+    cite-method: natbib
+    fontsize: 12pt
+bibliography: references.bib
+---
+
+
+### Exercise 1
+
+Drawing from the exercise sets, we download adjusted prices for all constituents of the Dow Jones 30 Index from January 1st, 2000 until December 31st, 2023 from Yahoo!Finance. This process follows the methodology outlined in the exercise sets, employing the $\texttt{tq\_index}$ and $\texttt{tq\_get}$ commands to gather the data into the $\texttt{index\_prices}$ data set. We then use a filter mechanism to sort out the tickers that do not have a continuous trading history, ultimately creating a new data set called $\texttt{index\_prices\_filtered}$ without the tickers $\textbf{CRM}$, $\textbf{DOW}$ and $\textbf{V}$. Lastly, we compute monthly returns using the $\texttt{tq\_transmute}$ command, storing the results in the data set $\texttt{monthly_returns}$. The code has not been echoed in this .pdf-file, because it is not particularly interesting and does not reveal any results. Please see the .qmd-file for the code details.
+
+
+```{r}
+library("tidyverse")
+library("tidyquant")
+library("scales")
+library("knitr")
+
+# Downloading all stock tickers
+symbols <- tq_index("DOW") |> 
+  filter(company != "US DOLLAR") # Removing the US DOLLAR
+
+# Downloading prices from Yahoo!Finance
+index_prices <- tq_get(symbols,
+                       get = "stock.prices",
+                       from = "2000-01-01",
+                       to = "2023-12-31"
+                       )
+
+# Filtering out symbols, that are not present for the entire period
+index_prices_filtered <- index_prices %>%
+  mutate(year = year(date)) %>%
+  group_by(symbol) %>%
+  mutate(start_year = min(year), end_year = max(year)) %>% 
+  ungroup() %>%
+  filter(start_year == 2000, end_year == 2023) %>% 
+  select(-start_year, -end_year, -year) 
+
+# Calculating monthly_returns
+monthly_returns <- index_prices_filtered %>%
+  group_by(symbol) %>%
+  tq_transmute(select = adjusted, 
+               mutate_fun = periodReturn, 
+               period = 'monthly', 
+               col_rename = 'monthly_return', 
+               type = 'log') %>%
+  ungroup()
+
+```
+
+
+### Exercise 2
+
+Referring back to the monthly returns stored in the data set $\texttt{monthly\_returns}$, we compute the sample mean $\mu$ and the variance-covariance matrix $\Sigma$ using the commands $\texttt{mean()}$ and $\texttt{cov()}$. As stated by the assignment, we must compute annualized values to construct the Sharpe ratio for all the assets. This is done by using the following methodology: \$\$\$\$
+
+
+```{r}
+# Calculate the sample mean for each stock
+mean_returns <- monthly_returns %>%
+  group_by(symbol) %>%
+  summarise(Mean_Monthly_Return = mean(monthly_return, na.rm = TRUE))
+
+# Pivot the data, in order to use cov() function correctly
+returns_wide <- monthly_returns %>%
+  pivot_wider(names_from = symbol, values_from = monthly_return)
+
+# Removing the date column
+returns_wide <- select(returns_wide, -date)
+
+# Calculate the variance-covariance matrix
+var_cov_matrix <- cov(returns_wide)
+
+# Extracting the variances from the matrix
+variances <- diag(var_cov_matrix)
+
+# Calculating the standard deviations
+standard_deviations <- sqrt(variances)
+
+# Creating a tibble
+std_deviations <- tibble(symbol = names(standard_deviations), Std_Deviation = standard_deviations)
+
+test <- left_join(mean_returns, std_deviations, by = c("symbol"))
+
+```
+

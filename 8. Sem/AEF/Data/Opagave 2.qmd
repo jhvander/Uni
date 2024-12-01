@@ -1,0 +1,416 @@
+---
+title: "Mandatory Assignment 2"
+author: "Emil H. Erbas, Jeppe Vanderhaegen and Jacob G. Vestergaard"
+date: "2024/04/19"
+execute: 
+  echo: false
+  warning: false
+format:
+  pdf: 
+    number-sections: false
+    colorlinks: true
+    geometry:
+      - top=20mm
+      - left=20mm
+      - bottom=20mm
+      - right=20mm
+    cite-method: natbib
+    fontsize: 12pt
+---
+
+### Exercise 1
+
+We read in the monthly CRSP data $\texttt{crsp\_monthly}$ and the monthly market excess returns $\texttt{factors\_ff3\_monthly}$ from the $\texttt{tidy\_finance\_*.sqlite}$ database. The code is self explanatory, and has been taken from Stefan's website.
+
+```{r}
+rm(list=ls())
+library("tidyverse")
+library("RSQLite")
+library("ggplot2")
+library("dplyr")
+library("lubridate")
+library("broom")
+library("scales")
+library("purrr")
+library("knitr")
+library("lmtest")
+library("sandwich")
+
+tidy_finance <- dbConnect(SQLite(), 
+                          "/Users/jvander/Library/Mobile Documents/com~apple~CloudDocs/Documents/#University/8. Sem/AEF/Data/tidy_finance_r.sqlite",  #Change this according to your local server
+                          extended_types = TRUE)
+
+# Loading in Farma-French data    
+factors_ff_monthly <- tbl(tidy_finance, "factors_ff3_monthly") |>
+  select(month, mkt_excess) |>
+  collect()
+
+# Loading in CRSP data    
+crsp_monthly <- tbl(tidy_finance, "crsp_monthly") 
+crsp_monthly <- crsp_monthly |> collect()
+
+# Loading in betas
+beta <- tbl(tidy_finance, "beta") |>
+  select(permno, month, beta_monthly) |>
+  filter(!is.na(beta_monthly)) |>
+  collect()
+```
+
+### Exercise 2
+
+We generate the variable $\texttt{mktcap\_lag\_12}$ which contains the firm's market capitalization 12 months before the measurement date.
+
+We compute the momentum of stock $i$ using the following formula, and assign the obtained values to the variable $\texttt{Mom12}$: $$Mom^{12}_{i,t}=100\cdot\frac{mc_{i,t-1}-mc_{i,t-12}}{mc_{i,t-12}}$$ When comparing the differences between computing momentum based on relative changes in prices versus market capitalization, it is reasonable to expect different outcomes. Momentum calculated solely from price changes focuses only on fluctuations in stock prices. This approach primarily captures market trends and may be influenced by events like stock splits or dividends. However, when market capitalization is considered, the analysis also incorporates broader market dynamics. This includes corporate actions such as share issuance and buybacks, as well as overall changes in the company’s equity structure. Therefore, using market capitalization offers a more comprehensive view, reflecting both price movements and changes in the firm's financial composition.
+
+Please note that we have omitted all data observations prior to 1990-01-01 because beta values are only available from that point onward. This step is crucial for the upcoming exercise and prevents any potential merging issues arising from different dates among the variables. Additionally, it enables us to discard the initial 12 observations for each $\texttt{permno}$, ensuring there are no missing values for the lagged market capitalization.
+
+```{r}
+# First, ensure the date column is in Date format
+crsp_monthly$date <- as.Date(crsp_monthly$date, format = "%Y-%m-%d")
+
+# Sort the data by permno and date to ensure order
+crsp_monthly <- crsp_monthly %>%
+  arrange(permno, date)
+
+# Create mktcap_lag_12
+crsp_monthly <- crsp_monthly %>%
+  group_by(permno) %>%
+  mutate(mktcap_lag_12 = lag(mktcap, 12)) %>%
+  ungroup()
+
+# Filtering
+crsp_monthly <- crsp_monthly %>%
+  filter(month >= as.Date("1990-01-01"))
+
+beta <- beta %>%
+  filter(month >= as.Date("1990-01-01"))
+
+# Merging beta and crsp_monthly
+data_for_sorts <- crsp_monthly |>
+  inner_join(beta, join_by(permno, month))
+
+# Calculate the momentum for each stock as defined
+data_for_sorts <- data_for_sorts %>%
+  mutate(Mom12 = ifelse(mktcap_lag_12 > 0, 100 * (mktcap_lag - mktcap_lag_12) / mktcap_lag_12, NA))
+```
+
+### Exercise 3
+
+We calculate monthly portfolio breakpoints using $\texttt{Mom12}$ as the sorting variable, organizing the data into deciles. Observations are assigned to deciles from 1 to 10, with higher $\texttt{Mom12}$ values placed in higher deciles, relative to the corresponding month.
+
+To calculate the equal-weighted average of $\texttt{Mom12}$ and $\texttt{mktcap}$ for each of the ten portfolios, we calculate the average $\texttt{Mom12}$ and $\texttt{mktcap}$ for each month, in each decile. These results are stored in the dataset $\texttt{monthly\_averages}$, where one is able to observe the average values, grouped by $\texttt{month}$ and $\texttt{decile}$. Using these values, we are able to average using $\texttt{decile}$ as the grouping variable, yielding in the equal-weighted average values for $\texttt{Mom12}$ and $\texttt{mtkcap}$ for the ten portfolios. The results can be observed in the table below:
+
+```{r}
+# Function to divide into deciles
+assign_portfolio <- function(data, 
+                             sorting_variable, 
+                             n_portfolios) {
+  # Compute breakpoints
+  breakpoints <- data |>
+    pull({{ sorting_variable }}) |>
+    quantile(
+      probs = seq(0, 1, length.out = n_portfolios + 1),
+      na.rm = TRUE,
+      names = FALSE
+    )
+  
+  # Assign portfolios
+  assigned_portfolios <- data |>
+    mutate(portfolio = findInterval(
+      pick(everything()) |>
+        pull({{ sorting_variable }}),
+      breakpoints,
+      all.inside = TRUE
+    )) |>
+    pull(portfolio)
+  
+  # Output
+  return(assigned_portfolios)
+}
+
+# Assigning decile to our dataset
+data_for_sorts <- data_for_sorts %>%
+  group_by(month) %>%  # Use the existing 'month' variable for grouping
+  mutate(decile = assign_portfolio(pick(everything()), sorting_variable = Mom12, n_portfolios = 10)) %>%
+  ungroup()
+
+# Calculating monthly averages for the deciles, for Mom12 and mktcap
+monthly_averages <- data_for_sorts %>%
+  group_by(month, decile) %>%
+  summarise(
+    Monthly_Avg_Mom12 = mean(Mom12, na.rm = TRUE),
+    Monthly_Avg_mktcap = mean(mktcap, na.rm = TRUE),
+    .groups = 'drop'
+  )
+
+# Averaging the monthly averages for Mom12 and mktcap
+overall_averages <- monthly_averages %>%
+  group_by(decile) %>%
+  summarise(
+    Mom12_average = mean(Monthly_Avg_Mom12, na.rm = TRUE),
+    mktcap_average = mean(Monthly_Avg_mktcap, na.rm = TRUE),
+    .groups = 'drop'
+  )
+
+# Generating table
+kable(overall_averages)
+
+```
+
+We proceed by calculating value-weighted monthly excess returns for the decile portfolios and storing the results in the dataset called $\texttt{momenmtum\_portfolios}$. Using these results, we calculate the average excess return and CAPM alpha for the ten portfolios sorted by momentum. Results are showcased in the diagrams on the next page.
+
+We now turn our analysis to the momentum strategy, which involves constructing a portfolio that goes long on past winners and short on past losers. We conduct a regression without a slope coefficient, e.g. $y_i=b+e_i$, on the long-short portfolio, where the intercept corresponds to the mean. Subsequently, we perform a hypothesis test on the intercept. Our results indicate, that the mean return of the long-short portfolio is not significantly different from zero. This implies that we cannot conclude that the performance of the strategy is significantly better. Results of the regression can be observed below. We then estimate $\hat{\alpha}=0.009$ and $\hat{\beta}=-0.74$ for the long-short portfolio using a linear regression. We perform the following two hypothesis tests on these estimates: $$H_0 : \beta = 0$$ $$H_0 : \alpha \leq 0$$ We are able to reject both null hypothesis. These results indicate, that $\beta$ is different from zero, and alpha is significantly different from zero in the positive direction, which would imply that the portfolio has a performance that exceeds the expected return given its beta. Results of the regression can be observed below.
+
+```{r}
+# Create the portfolios
+momentum_portfolios <- data_for_sorts |>
+  group_by(month) |>
+  mutate(
+    portfolio = assign_portfolio(
+      data = pick(everything()),
+      sorting_variable = Mom12,
+      n_portfolios = 10
+    ),
+    portfolio = as.factor(portfolio)
+  ) |>
+  group_by(portfolio, month) |>
+  summarize(
+    ret_excess = weighted.mean(ret_excess, mktcap_lag),
+    .groups = "drop"
+  )|>
+  left_join(factors_ff_monthly, join_by(month))
+
+# Construct beta and alpha for the portfolios
+momentum_portfolios_summary <- momentum_portfolios |>
+  nest(data = c(month, ret_excess, mkt_excess)) |>
+  mutate(estimates = map(
+    data, ~ tidy(lm(ret_excess ~ 1 + mkt_excess, data = .x))
+  )) |>
+  unnest(estimates) |> 
+  select(portfolio, term, estimate) |> 
+  pivot_wider(names_from = term, values_from = estimate) |> 
+  rename(alpha = `(Intercept)`, beta = mkt_excess) |> 
+  left_join(
+    momentum_portfolios |> 
+      group_by(portfolio) |> 
+      summarize(ret_excess = mean(ret_excess),
+                .groups = "drop"), join_by(portfolio)
+  )
+
+# Graph 1
+momentum_portfolios_summary |>
+  ggplot(aes(x = portfolio, y = alpha, fill = portfolio)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "CAPM alphas of momentum-sorted decile portfolios",
+    x = "Decile portfolio",
+    y = "CAPM alpha",
+    fill = "Portfolio"
+  ) +
+  scale_y_continuous(labels = percent) +
+  theme(legend.position = "None")
+
+# Graph 2
+momentum_portfolios_summary |>
+  ggplot(aes(x = portfolio, y = ret_excess, fill = portfolio)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Average excess return of momentum-sorted decile portfolios",
+    x = "Decile portfolio",
+    y = "Excess return",
+    fill = "Portfolio"
+  ) +
+  scale_y_continuous(labels = percent) +
+  theme(legend.position = "None")
+
+# Creating the long-short portfolio
+momentum_longshort <- momentum_portfolios |>
+  mutate(portfolio = case_when(
+    portfolio == max(as.numeric(portfolio)) ~ "high",
+    portfolio == min(as.numeric(portfolio)) ~ "low"
+  )) |>
+  filter(portfolio %in% c("low", "high")) |>
+  pivot_wider(id_cols = month, 
+              names_from = portfolio, 
+              values_from = ret_excess) |>
+  mutate(long_short = high - low) |>
+  left_join(factors_ff_monthly, join_by(month)) |>
+  select(-low, -high)
+
+# Calculating the regression of the average mean
+momentum_longshort_summary_mean <- momentum_longshort %>%
+  summarise(estimates = list(tidy(lm(long_short ~ 1, data = momentum_longshort)))) %>%
+  unnest(estimates) %>%
+  filter(term %in% c("(Intercept)")) %>%
+  pivot_wider(names_from = term, values_from = estimate) %>%
+  rename(mean_average_return = `(Intercept)`)
+
+momentum_longshort_summary_mean <- momentum_longshort_summary_mean %>%
+  mutate(hypothesis = ifelse(p.value > 0.05, "Not Rejected", "Rejected"))
+
+
+# Calculating beta and alpha for the long-short portfolio
+momentum_longshort_summary_alpha_beta <- momentum_longshort %>%
+  summarise(estimates = list(tidy(lm(long_short ~ 1 + mkt_excess, data = momentum_longshort)))) %>%
+  unnest(estimates) %>%
+  filter(term %in% c("(Intercept)", "mkt_excess")) %>%
+  pivot_wider(names_from = term, values_from = estimate) %>%
+  rename(alpha = `(Intercept)`, beta = mkt_excess)
+
+momentum_longshort_summary_alpha_beta <- momentum_longshort_summary_alpha_beta %>%
+  mutate(hypothesis = ifelse(p.value > 0.05, "Not Rejected", "Rejected"))
+
+# Table for alpha and beta testing
+kable(momentum_longshort_summary_mean)
+kable(momentum_longshort_summary_alpha_beta)
+```
+
+### Exercise 4
+
+Ridge regression is particularly suited for dealing with multi collinearity in data, a common issue in financial datas ets like stock data. This regression method incorporates a penalty term, represented by $\lambda$, which helps to moderate the size of coefficients. By doing so, it effectively shrinks these coefficients to address potential correlations between independent variables.
+
+In our analysis, after selecting and preparing our data, we divided it into training and testing sets. The training set was further partitioned into 10 smaller subsets for the purposes of cross-validation, a process streamlined by the $\texttt{cv.glmnet}$ function. This function performs ridge regression repeatedly, training the model 10 times, each time with one of the subsets withheld to serve as a validation set. This technique ensures that every subset is used as a validation set exactly once, providing a robust estimate of model performance.
+
+The value of $\lambda$ that minimizes the average cross-validation error is identified as the optimal one, accessed via $\texttt{min.lambda}$. We then retrain the model with this optimal $\lambda$ using the entire training set. To evaluate the performance of our model on unseen data, we use it to make predictions on the test set and compute the Root Mean Squared Error (RMSE). This metric offers a clear indication of the model's accuracy, helping us to gauge how effectively it predicts new data.
+
+```{r}
+library("glmnet")
+library("tidymodels")
+library("gridExtra")
+library("lubridate")
+
+#Collecting data, and filtering PC 
+crsp_monthly <- crsp_monthly %>%
+  filter(month >= as.Date("1990-01-01"))
+         
+#Filter for the NYSE 
+crsp_filter <- crsp_monthly |>
+  filter(exchange == 'NYSE') |>
+  select(-exchange, -industry, -exchcd, -siccd, -gvkey, -shrout, -altprc, -month, -mktcap_lag, -mktcap_lag_12) |>
+  arrange(permno, desc(date), mktcap)
+
+#Removing the smallest firms on the NYSE based on marketcap
+data <- crsp_filter %>%
+  group_by(date) %>%
+  mutate(perc_20 = quantile(mktcap, probs = 0.20)) %>%
+  ungroup() %>%
+  filter(mktcap >= perc_20) %>%
+  select(-perc_20, -mktcap)
+
+data <- data %>%
+  group_by(date) %>%
+  mutate(ret_demean = ret_excess - mean(ret_excess)) %>%
+  ungroup()
+
+# Prepare the predictor variables. Lagging all variables and squaring some of them 
+predictors_linear <- sapply(2:60, function(k) lag(data$ret_excess, k))
+predictors_squared <- sapply(2:60, function(k) lag(data$ret_excess, k)^2)
+
+#Combining the predictors
+predictors <- as.data.frame(cbind(predictors_linear, predictors_squared)) 
+
+#Demeaning the  predictors 
+predictors <- predictors %>%
+  mutate(across(everything(), ~ . - mean(., na.rm = TRUE))) %>%
+  mutate(across(everything(), ~ . / sd(., na.rm = TRUE)))
+
+
+complete_cases <- complete.cases(predictors)
+predictors <- predictors[complete_cases,]
+response <- data$ret_demean[complete_cases]
+
+#Splitting the dataset into a training set and a testing set. 
+set.seed(2024) 
+data_split <- initial_split(data_frame(predictors, response), prop = 0.8)
+train_data <- training(data_split)
+test_data <- testing(data_split)
+
+#Converting the datasets into a matrxi format
+train_predictors_matrix <- as.matrix(select(train_data, -response))
+train_response_matrix <- as.matrix(train_data$response)
+test_predictors_matrix <- as.matrix(select(test_data, -response))
+
+# We fit the model. The alpha parameter set to 0 indicates ridge regression. No Intercept
+cv_ridge <- cv.glmnet(train_predictors_matrix, 
+                      train_response_matrix, 
+                      alpha = 0, 
+                      intercept =FALSE)
+
+# Checking the model
+print(cv_ridge)
+
+#We retrieve the lambda which minimizes the cross-validation error
+min_lambda <- cv_ridge$lambda.min
+
+# Final model with best lambda
+final_model <- glmnet(train_predictors_matrix, train_response_matrix, alpha = 0, 
+                      lambda = min_lambda)
+
+# We make predictions on the testing set using our final model
+final_predictions <- predict(final_model, test_predictors_matrix, s = min_lambda)
+
+#We calculate the RMSE on the testing set
+test_actual <- test_data$response
+rmse <- sqrt(mean((final_predictions - test_actual)^2))
+
+#Creating a data frame, which combines the RMSE and Lambda 
+lambda_values <- cv_ridge$lambda
+rmse_values <- cv_ridge$cvm
+diagnostic_data <- data.frame(Lambda = lambda_values, RMSE = rmse_values)
+
+#We plot the RMSE over lambda
+ggplot(diagnostic_data, aes(x = Lambda, y = RMSE)) +
+  geom_line() +
+  geom_point(data = subset(diagnostic_data, Lambda == min_lambda), 
+             aes(x = Lambda, y = RMSE), 
+             color = "red") +
+  scale_x_log10() + # Lambda is plotted on  log scale
+  labs(x = "Lambda", y = "Root Mean Squared Error (RMSE)", 
+       title = "RMSE over Different Values of Lambda") +
+  theme_minimal()
+
+selected_lambda <- cv_ridge$lambda.min
+
+# Create a dataframe for the coefficients in order to plot them: 
+#This is done solely to better visualize the coefficients in the upcomming plot
+coef_final_model <- as.matrix(coef(final_model, s = min_lambda))
+coef_df <- data.frame(
+  Predictor = paste0(rep(c("b", "c"), each = 59), 2:60), #Renaming the variables
+  Coefficient = as.numeric(coef_final_model[-1]) 
+)
+
+# Splitting the dataframe into one for linear (b) and squared (c) coefficients
+linear_coef_df <- coef_df[1:59, ]  #First 60 are linear
+squared_coef_df <- coef_df[60:118, ]  # The following 60 are squared
+
+# Coefficient bar plot for linear coefficients 
+p1 <- ggplot(linear_coef_df, aes(x = reorder(Predictor, Coefficient), y = Coefficient)) +
+  geom_bar(stat = "identity", fill = 'blue') +
+  coord_flip() +  # Flipping coordinates for horizontal bars
+  scale_y_continuous(labels = label_number()) +
+  labs(x = "Linear Coefficients", y = "Predictors") +
+  theme_minimal()
+
+# Coefficient bar plot for squared coefficients
+p2 <- ggplot(squared_coef_df, aes(x = reorder(Predictor, Coefficient), y = Coefficient)) +
+  geom_bar(stat = "identity", fill = 'orange') +
+  coord_flip() +  
+  scale_y_continuous(labels = label_number()) +
+  labs(x = "Squared Coefficients", y = "Predictors") +
+  theme_minimal()
+
+# Adjusting theme in order to better visualize the data
+p1 <- p1 + theme(axis.text.y = element_text(size = 5))  
+p2 <- p2 + theme(axis.text.y = element_text(size = 5))  
+
+# Making the plots stand side by side
+grid.arrange(p1, p2, ncol = 2)
+
+
+```
+
+The optimal value for the lambda hyperparameter is found at the point on the RMSE graph where the error is minimized, indicated by a distinct red dot. This value is chosen as it yields the lowest RMSE, tailored to avoid overfitting while still capturing significant patterns in the data.
+
+Furthermore, the bar plots exhibit the regression coefficients for our linear and squared predictors, with the $b$ series representing linear and the $c$ series the squared terms. The length and direction of each bar reflect the magnitude and the sign of the coefficient, respectively. By examining the coefficients for evidence of momentum or other predictability patterns, larger coefficients (positive or negative) signify a stronger relationship with future returns. For instance, positive coefficients associated with recent returns might could suggest a possible momentum effect, implying that stocks with robust returns in the recent past are likely to perform well shortly. Conversely, negative coefficients might hint at a mean-reversion tendency, indicating potential reversals in stock price movements. In practice should the b2-b12 coefficients be positive in order to determine a possible momentum effect, but since the coefficients are both positive and negative, we can not see a clear effect.
+
+Should the short term coefficients be largely negative, one could bet against the momentum effect, this is called a mean-reversion strategy. For each individual stock, one could search for either momentum effects, thereby choosing either to bet against it or follow the possible momentum effect.

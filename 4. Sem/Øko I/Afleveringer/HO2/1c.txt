@@ -1,0 +1,14 @@
+	(1)
+VARIABLES	logaarslon
+	
+alder	0.112***
+	(0.0125)
+ysmalder	0.101***
+	(0.0124)
+Constant	10.30***
+	(0.0493)
+	
+Observations	2,400
+R-squared	0.046
+Standard errors in parentheses	
+*** p<0.01, ** p<0.05, * p<0.1	

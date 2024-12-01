@@ -1,0 +1,12 @@
+	(1)	(2)
+VARIABLES	uhatsq	uhatsq
+		
+m2	0.00574***	0.00574***
+	(0.000636)	(0.000636)
+Constant	-0.162***	-0.162***
+	(0.0583)	(0.0583)
+		
+Observations	988	988
+R-squared	0.076	0.076
+Standard errors in parentheses		
+*** p<0.01, ** p<0.05, * p<0.1		
