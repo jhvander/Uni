@@ -2,6 +2,7 @@ import numpy as np
 from scipy.stats import norm, ncx2
 from scipy.optimize import minimize, Bounds
 from scipy.special import ndtr, gammainc
+from scipy.linalg import sqrtm
 from numpy.polynomial.hermite import hermfit, hermval, hermder
 import copy
 
@@ -54,6 +55,8 @@ def forward_libor_rates_from_zcb_prices(T,p,horizon = 1):
     return f
 
 def accrual_factor_from_zcb_prices(t,T_n,T_N,fixed_freq,T,p):
+    # print(f"inside accrual factor")
+    # print(t,T_n,T_N,fixed_freq,T,p)
     T_fix = []
     if type(fixed_freq) == str:
         if fixed_freq == "quarterly":
@@ -826,6 +829,78 @@ def caplet_prices_hwev(strike,a,sigma,T,p):
         price_caplet[i] = (1 + (T[i]-T[i-1])*strike)*euro_option_price_hwev(1/(1 + (T[i]-T[i-1])*strike),T[i-1],T[i],p[i-1],p[i],a,sigma,type = "put")
     return price_caplet
 
+# Libor market model
+def drift_lmm(L,alpha,sigma,rho):
+    N = len(L)
+    drift = np.zeros(N)
+    for i in range(0,N-1):
+        for k in range(i+1,N):
+            drift[i] += alpha[k]*L[k]/(1+alpha[k]*L[k])*sigma[i]*sigma[k]*rho[i,k]
+    return drift
+
+def simul_lmm(L0,T,sigma,rho,M):
+    N = len(L0)
+    alpha = np.zeros(N)
+    for n in range(1,N):
+        alpha[n-1] = T[n] - T[n-1]
+    delta = T[1]*N/M
+    delta_sqrt = np.sqrt(delta)
+    log_L_simul = np.nan*np.ones([N,M+1])
+    log_L_simul[:,0] = np.log(L0)
+    stage = 0
+    Mpp = int(M/N)
+    while stage < N:
+        Z = np.random.standard_normal([M,N-stage])
+        rho_sqrt = np.real(sqrtm(rho[stage:N,stage:N]))
+        for m in range(0,Mpp):
+            drift = drift_lmm(log_L_simul[stage:N,stage*Mpp+m],alpha[stage:N],sigma[stage:N],rho[stage:N,stage:N])
+            log_L_simul[stage:N,stage*Mpp+m+1] = log_L_simul[stage:N,stage*Mpp+m] - (0.5*sigma[stage:N]**2 + drift)*delta + delta_sqrt*sigma[stage:N]*np.matmul(rho_sqrt,Z[m,:])
+        stage += 1
+    return np.exp(log_L_simul)
+
+# def p_matrix_construct(alpha,R):
+#     # print(f"inside matrix construct")
+#     # print(R)
+#     N = len(R)
+#     M = np.zeros([N,N])
+#     for c in range(0,N):
+#         M[0,c] = R[0]*alpha[c]
+#     M[0,-1] += 1
+#     for r in range(1,N):
+#         M[r,r-1] = -1
+#         for c in range(r,N):
+#             M[r,c] = R[r]*alpha[c]
+#         M[r,-1] += 1
+#     # print(f"Matrix done")
+#     # print(M)
+#     return M
+#
+# def simul_smm(R0,T,sigma,rho,M):
+#     print(f"inside simul_smm")
+#     N = len(R0) - 1
+#     alpha = np.zeros(N+1)
+#     for n in range(1,N+2):
+#         alpha[n-1] = T[n] - T[n-1]
+#     delta = T[1]*4/M
+#     delta_sqrt = np.sqrt(delta)
+#     R_simul = np.nan*np.ones([N+1,M+1])
+#     R_simul[:,0] = R0
+#     stage = 0
+#     Mpp = int(M/N)
+#     while stage < 1:
+#         m = 0
+#         p_matrix = p_matrix_construct(alpha[stage:],R_simul[stage:,stage*Mpp+m])
+#         y = np.zeros([N+1-stage])
+#         y[0] = 1
+#         p = np.linalg.solve(p_matrix,y)
+#         L = (1-p[0])/(alpha[stage]*p[0])
+#         drift = 1
+#         stage += 1
+#     return True
+#
+# def drift_smm(p,alpha,R,sigma):
+#     return True
+
 # Nelson-Siegel function
 def F_ns(param,T):
     if type(T) == int or type(T) == float or type(T) == np.int32 or type(T) == np.int64 or type(T) == np.float64:
@@ -922,8 +997,8 @@ def theta_ns(param,t):
 
 # Caplets
 def black_caplet_price(sigma,T,R,alpha,p,L,type = "call"):
-    d1 = (np.log(L/R) + 0.5*sigma**2*(T-alpha))/(sigma*np.sqrt(T-alpha))
-    d2 = (np.log(L/R) - 0.5*sigma**2*(T-alpha))/(sigma*np.sqrt(T-alpha))
+    d1 = (np.log(L/R) + 0.5*sigma**2*T)/(sigma*np.sqrt(T))
+    d2 = (np.log(L/R) - 0.5*sigma**2*T)/(sigma*np.sqrt(T))
     if type == 'put':
         price = alpha*p*(R*ndtr(-d2) - L*ndtr(-d1))
     else:
@@ -932,7 +1007,7 @@ def black_caplet_price(sigma,T,R,alpha,p,L,type = "call"):
 
 def black_caplet_delta(sigma,T,R,alpha,p,L,type = "call"):
     d1 = (np.log(L/R) + 0.5*sigma**2*T)/(sigma*np.sqrt(T))
-    d2 = (np.log(L/R) - 0.5*sigma**2*(T-alpha))/(sigma*np.sqrt(T-alpha))
+    d2 = (np.log(L/R) - 0.5*sigma**2*T)/(sigma*np.sqrt(T))
     if type == "call":
         # p_prev = p*(1+alpha*L)
         price = alpha*p*(L*ndtr(d1) - R*ndtr(d2))
@@ -941,9 +1016,9 @@ def black_caplet_delta(sigma,T,R,alpha,p,L,type = "call"):
 
 def black_caplet_gamma(sigma,T,R,alpha,p,L,type = "call"):
     d1 = (np.log(L/R) + 0.5*sigma**2*T)/(sigma*np.sqrt(T))
-    d2 = (np.log(L/R) - 0.5*sigma**2*(T-alpha))/(sigma*np.sqrt(T-alpha))
+    d2 = (np.log(L/R) - 0.5*sigma**2*T)/(sigma*np.sqrt(T))
     if type == "call":
-        gamma = alpha*p*(norm.pdf(d1)/(L*sigma*np.sqrt(T-alpha))-(2*alpha)/((1+alpha*L)**2)*(alpha*R*ndtr(d2) + ndtr(d1)))
+        gamma = alpha*p*(norm.pdf(d1)/(L*sigma*np.sqrt(T))-2*alpha/((1+alpha*L)**2)*(alpha*R*ndtr(d2) + ndtr(d1)))
     return gamma
 
 def black_caplet_vega(sigma,T,R,alpha,p,L,type = "call"):
