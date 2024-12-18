@@ -17,7 +17,7 @@ price_market = np.array([0.12301549, 0.10339456, 0.08421278, 0.06567338, 0.04843
 S_swap = 0
 for i in range(idx_exer+1,idx_mat + 1):
     S_swap += alpha*p[i]
-R_swap = (p[idx_exer] - p[idx_mat])/S_swap
+R_swap = (p[idx_exer] - p[idx_mat])/S_swap # We compute the accrual factor. 
 print(f"accrual factor: {S_swap}, 2Y5Y par swap rate: {R_swap}")
 K, iv_market = np.zeros([N_swaption]), np.zeros([N_swaption])
 for i in range(0,N_swaption):
@@ -25,7 +25,7 @@ for i in range(0,N_swaption):
     iv_market[i] = fid.black_swaption_iv(price_market[i],T[idx_exer],K[i],S_swap,R_swap,type = "call", iv0 = 0.25, max_iter = 1000, prec = 1.0e-12)
 print(iv_market)
 
-# Problem 2
+# Problem 2 # Fitting the SABR-market model. 
 param_0 = 0.055, 0.5, 0.48,-0.25
 result = minimize(fid.fit_sabr_obj,param_0,method = 'nelder-mead',args = (iv_market,K,T[idx_exer],R_swap),options={'xatol': 1e-8,'disp': True})
 print(f"Parameters from fit: {result.x}, squared dev: {result.fun}")
@@ -38,8 +38,8 @@ print(f"Parameters from the fit: sigma_0: {sigma_0}, beta: {beta}, upsilon: {ups
 print(f"Implied volatilities from market prices:")
 print(iv_fit)
 
-# Problem 3 -  Simulating the SABR model
-seed = 3
+# Problem 3 -  Simulating the SABR model - In simulation sigma can both explode and become very small. This is when sigma goes either to infty or towards 0
+seed = 3 # Different sigmas shows different results. Loop through the different given seeds to see this. 
 # np.random.seed(4)  # Plot that looks realistic
 # np.random.seed(13)  # Volatility blows up
 # np.random.seed(3)  # Volatility goes to 0 14 maybe
@@ -68,7 +68,7 @@ for idx in idx_conv_check:
 # Problem 5 -  Hedging in the SABR model
 idx_position = 9
 # Bumping sigma_0
-sigma_0_bump = sigma_0 - 0.001
+sigma_0_bump = sigma_0 - 0.001 # If we bump the initial sigma with a negative value, then it makes sense, that the value of the option decreases as lower volatility, lower value of the option
 iv_sigma_0 = fid.sigma_sabr(K[idx_position],T[idx_exer],R_swap,sigma_0_bump,beta,upsilon,rho,type = "call")
 price_sigma_0 = fid.black_swaption_price(iv_sigma_0,T[idx_exer],K[idx_position],S_swap,R_swap,type = "call")
 print(f"price after bumping sigma_0: {price_sigma_0}, diff: {price_sigma_0-price_market[idx_position]}")
