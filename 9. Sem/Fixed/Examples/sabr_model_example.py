@@ -68,7 +68,7 @@ for idx in idx_conv_check:
 # Problem 5 -  Hedging in the SABR model
 idx_position = 9
 # Bumping sigma_0
-sigma_0_bump = sigma_0 - 0.001 # If we bump the initial sigma with a negative value, then it makes sense, that the value of the option decreases as lower volatility, lower value of the option
+sigma_0_bump = sigma_0 - 0.001 # If we bump the initial sigma with a negative value, then it makes sense, that the value of the option decreases as lower volatility, lower value of the
 iv_sigma_0 = fid.sigma_sabr(K[idx_position],T[idx_exer],R_swap,sigma_0_bump,beta,upsilon,rho,type = "call")
 price_sigma_0 = fid.black_swaption_price(iv_sigma_0,T[idx_exer],K[idx_position],S_swap,R_swap,type = "call")
 print(f"price after bumping sigma_0: {price_sigma_0}, diff: {price_sigma_0-price_market[idx_position]}")

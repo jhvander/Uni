@@ -24,14 +24,6 @@ swap_market = [{"id": 10,"instrument": "swap","maturity": 2, "rate": 0.04377, "f
 {"id": 16,"instrument": "swap","maturity": 15, "rate": 0.05148, "float_freq": "semiannual", "fixed_freq": "annual","indices": []},
 {"id": 17,"instrument": "swap","maturity": 20, "rate": 0.05181, "float_freq": "semiannual", "fixed_freq": "annual","indices": []},
 {"id": 18,"instrument": "swap","maturity": 30, "rate": 0.05211, "float_freq": "semiannual", "fixed_freq": "annual","indices": []}]
-data = EURIBOR_fixing + fra_market + swap_market
-
-# Problem 1 - Fitting the yield curve
-interpolation_options = {"method":"nelson_siegel","transition": "smooth"}
-interpolation_options = {"method":"hermite","degree":2,"transition": "smooth"}
-T_fit, R_fit = fid.zcb_curve_fit(data,interpolation_options = interpolation_options)
-T_6m = np.array([i*0.5 for i in range(0,61)])
-p_inter, R_inter, f_inter, T_inter = fid.zcb_curve_interpolate(T_6m,T_fit,R_fit,interpolation_options = interpolation_options)
 
 # c) The par swap rate curve
 T_swap = np.array([i for i in range(1,31)])
