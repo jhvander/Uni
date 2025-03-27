@@ -1,5 +1,3 @@
-# heston_lsm_utils.py
-
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from numba import njit
@@ -40,8 +38,8 @@ def least_squares_monte_carlo(S, K, r, T, M):
     dt = T / M
     intrinsic_values = np.maximum(K - S, 0)
     cashflows = intrinsic_values[:, -1].copy()
-    early_exercise_count = 0
     total_paths = S.shape[0]
+    exercised_early = np.zeros(total_paths, dtype=bool)
 
     for t in range(M - 1, 0, -1):
         in_the_money = intrinsic_values[:, t] > 0
@@ -51,14 +49,14 @@ def least_squares_monte_carlo(S, K, r, T, M):
             model = LinearRegression().fit(X, Y)
             continuation_value = model.predict(X)
             exercise = intrinsic_values[in_the_money, t] > continuation_value
-            early_exercise_count += np.sum(exercise)
+            exercised_early[in_the_money] |= exercise
             cashflows[in_the_money] = np.where(
                 exercise,
                 intrinsic_values[in_the_money, t],
                 cashflows[in_the_money] * np.exp(-r * dt)
             )
 
-    early_exercise_freq = early_exercise_count / total_paths
+    early_exercise_freq = np.mean(exercised_early)
     price = np.mean(cashflows) * np.exp(-r * dt)
     return price, early_exercise_freq
 
