@@ -34,12 +34,14 @@ def simulate_bs_paths(S0, sigma, r, T, M, N):
         S[:, t] = S[:, t-1] * np.exp((r - 0.5 * sigma**2) * dt + sigma * np.sqrt(dt) * Z)
     return S
 
-def least_squares_monte_carlo(S, K, r, T, M):
+
+def least_squares_monte_carlo(S, K, r, T, M, track_boundary=False):
     dt = T / M
     intrinsic_values = np.maximum(K - S, 0)
     cashflows = intrinsic_values[:, -1].copy()
     total_paths = S.shape[0]
     exercised_early = np.zeros(total_paths, dtype=bool)
+    early_exercise_boundary = np.full(M + 1, np.nan) if track_boundary else None
 
     for t in range(M - 1, 0, -1):
         in_the_money = intrinsic_values[:, t] > 0
@@ -56,9 +58,14 @@ def least_squares_monte_carlo(S, K, r, T, M):
                 cashflows[in_the_money] * np.exp(-r * dt)
             )
 
-    early_exercise_freq = np.mean(exercised_early)
+            if track_boundary and np.any(exercise):
+                exercised_prices = X[exercise].flatten()
+                early_exercise_boundary[t] = exercised_prices.max()
+
     price = np.mean(cashflows) * np.exp(-r * dt)
-    return price, early_exercise_freq
+    early_exercise_freq = np.mean(exercised_early)
+    return (price, early_exercise_freq, early_exercise_boundary) if track_boundary else (price, early_exercise_freq)
+
 
 def heston_simulations(S0, K, T, r, kappa, theta, sigma, rho, v0, M, N, num_simulations):
     option_prices = np.zeros(num_simulations)
@@ -79,3 +86,39 @@ def bs_simulations(S0, K, T, r, sigma, M, N, num_simulations):
         option_prices[i] = price
         early_ex_freqs[i] = freq
     return option_prices, early_ex_freqs
+
+# --- Binomial Tree Implementation ---
+def binomial_american_put(S0, K, T, r, sigma, M):
+    dt = T / M
+    u = np.exp(sigma * np.sqrt(dt))
+    d = 1 / u
+    p = (np.exp(r * dt) - d) / (u - d)
+
+    # Terminal payoff
+    ST = np.array([S0 * (u ** j) * (d ** (M - j)) for j in range(M + 1)])
+    option_values = np.maximum(K - ST, 0)
+    early_exercise_boundary = np.full(M + 1, np.nan)
+
+    # Backward induction
+    for t in range(M - 1, -1, -1):
+        new_option_values = np.zeros(t + 1)
+        for j in range(t + 1):
+            S_tj = S0 * (u ** j) * (d ** (t - j))
+            exercise_value = max(K - S_tj, 0)
+            hold_value = np.exp(-r * dt) * (p * option_values[j + 1] + (1 - p) * option_values[j])
+            new_option_values[j] = max(exercise_value, hold_value)
+
+            if exercise_value > hold_value and np.isnan(early_exercise_boundary[t]):
+                early_exercise_boundary[t] = S_tj
+        option_values = new_option_values
+
+    return option_values[0], early_exercise_boundary
+
+def binomial_simulations(S0, K, T, r, sigma, M, num_simulations):
+    option_prices = np.zeros(num_simulations)
+    boundary_matrix = np.full((num_simulations, M + 1), np.nan)
+    for i in range(num_simulations):
+        price, boundary = binomial_american_put(S0, K, T, r, sigma, M)
+        option_prices[i] = price
+        boundary_matrix[i, :] = boundary
+    return option_prices, boundary_matrix
