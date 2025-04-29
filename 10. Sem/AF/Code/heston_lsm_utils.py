@@ -34,6 +34,13 @@ def simulate_bs_paths(S0, sigma, r, T, M, N):
         S[:, t] = S[:, t-1] * np.exp((r - 0.5 * sigma**2) * dt + sigma * np.sqrt(dt) * Z)
     return S
 
+def laguerre_basis(x):
+    return np.column_stack([
+        np.ones_like(x),               # L0
+        1 - x,                         # L1
+        1 - 2 * x + 0.5 * x**2         # L2
+    ])
+
 
 def least_squares_monte_carlo(S, K, r, T, M, track_boundary=False):
     dt = T / M
@@ -43,13 +50,15 @@ def least_squares_monte_carlo(S, K, r, T, M, track_boundary=False):
     exercised_early = np.zeros(total_paths, dtype=bool)
     early_exercise_boundary = np.full(M + 1, np.nan) if track_boundary else None
 
+
     for t in range(M - 1, 0, -1):
         in_the_money = intrinsic_values[:, t] > 0
         X = S[in_the_money, t].reshape(-1, 1)
         Y = cashflows[in_the_money] * np.exp(-r * dt)
         if len(Y) > 0:
-            model = LinearRegression().fit(X, Y)
-            continuation_value = model.predict(X)
+            X_basis = laguerre_basis(X.flatten() / K)  # Normalize by strike
+            model = LinearRegression().fit(X_basis, Y)
+            continuation_value = model.predict(X_basis)
             exercise = intrinsic_values[in_the_money, t] > continuation_value
             exercised_early[in_the_money] |= exercise
             cashflows[in_the_money] = np.where(
