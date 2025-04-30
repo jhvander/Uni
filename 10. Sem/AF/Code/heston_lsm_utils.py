@@ -42,24 +42,31 @@ def laguerre_basis(x):
     ])
 
 
-def least_squares_monte_carlo(S, K, r, T, M, track_boundary=False):
+def least_squares_monte_carlo(S, K, r, T, M, track_boundary=False, track_timing=False):
     dt = T / M
     intrinsic_values = np.maximum(K - S, 0)
     cashflows = intrinsic_values[:, -1].copy()
     total_paths = S.shape[0]
     exercised_early = np.zeros(total_paths, dtype=bool)
     early_exercise_boundary = np.full(M + 1, np.nan) if track_boundary else None
-
+    exercise_times = np.full(total_paths, np.nan) if track_timing else None  # NEW
 
     for t in range(M - 1, 0, -1):
         in_the_money = intrinsic_values[:, t] > 0
         X = S[in_the_money, t].reshape(-1, 1)
         Y = cashflows[in_the_money] * np.exp(-r * dt)
         if len(Y) > 0:
-            X_basis = laguerre_basis(X.flatten() / K)  # Normalize by strike
+            X_basis = laguerre_basis(X.flatten() / K)
             model = LinearRegression().fit(X_basis, Y)
             continuation_value = model.predict(X_basis)
             exercise = intrinsic_values[in_the_money, t] > continuation_value
+
+            # NEW: Track timing of first early exercise
+            if track_timing:
+                for idx, ex in zip(np.where(in_the_money)[0], exercise):
+                    if ex and np.isnan(exercise_times[idx]):
+                        exercise_times[idx] = t * dt
+
             exercised_early[in_the_money] |= exercise
             cashflows[in_the_money] = np.where(
                 exercise,
@@ -73,7 +80,15 @@ def least_squares_monte_carlo(S, K, r, T, M, track_boundary=False):
 
     price = np.mean(cashflows) * np.exp(-r * dt)
     early_exercise_freq = np.mean(exercised_early)
-    return (price, early_exercise_freq, early_exercise_boundary) if track_boundary else (price, early_exercise_freq)
+    if track_boundary and track_timing:
+        return price, early_exercise_freq, early_exercise_boundary, exercise_times
+    elif track_boundary:
+        return price, early_exercise_freq, early_exercise_boundary
+    elif track_timing:
+        return price, early_exercise_freq, exercise_times
+    else:
+        return price, early_exercise_freq
+
 
 
 def heston_simulations(S0, K, T, r, kappa, theta, sigma, rho, v0, M, N, num_simulations):
