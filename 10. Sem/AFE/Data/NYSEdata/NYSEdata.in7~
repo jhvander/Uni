@@ -1,0 +1,15 @@
+pcgive 700
+data NYSEdata.bn7
+>Date            1  1  741  1  1 32     NYSEdata 08-08-2017 09:35:16 date
+>Chevron         1  1  741  1  1 5992     NYSEdata 08-08-2017 09:35:16
+>Citigroup       1  1  741  1  1 11952     NYSEdata 08-08-2017 09:35:16
+>CocaCola        1  1  741  1  1 17912     NYSEdata 08-08-2017 09:35:16
+>Universal       1  1  741  1  1 23872     NYSEdata 08-08-2017 09:35:16
+>WaltDisney      1  1  741  1  1 29832     NYSEdata 08-08-2017 09:35:16
+>NYSEComposite    1  1  741  1  1 35792     NYSEdata 08-08-2017 09:35:16
+>RChevron        1  1  741  1  1 41752     NYSEdata 08-08-2017 09:35:16
+>RCitigroup      1  1  741  1  1 47712     NYSEdata 08-08-2017 09:35:16
+>RCocaCola       1  1  741  1  1 53672     NYSEdata 08-08-2017 09:35:16
+>RUniversal      1  1  741  1  1 59632     NYSEdata 08-08-2017 09:35:16
+>RWaltDisney     1  1  741  1  1 65592     NYSEdata 08-08-2017 09:35:16
+>RNYSEComposite    1  1  741  1  1 71552     NYSEdata 08-08-2017 09:35:16

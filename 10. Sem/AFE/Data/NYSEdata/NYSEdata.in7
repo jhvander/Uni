@@ -1,0 +1,32 @@
+pcgive 701
+data NYSEdata.bn7
+>Date            1  1  741  1  1 32 OxMetrics9 19-05-2025 21:58:33 date
+>Chevron         1  1  741  1  1 5992 OxMetrics9 19-05-2025 21:58:33
+>Citigroup       1  1  741  1  1 11952 OxMetrics9 19-05-2025 21:58:33
+>CocaCola        1  1  741  1  1 17912 OxMetrics9 19-05-2025 21:58:33
+>Universal       1  1  741  1  1 23872 OxMetrics9 19-05-2025 21:58:33
+>WaltDisney      1  1  741  1  1 29832 OxMetrics9 19-05-2025 21:58:33
+>NYSEComposite    1  1  741  1  1 35792 OxMetrics9 19-05-2025 21:58:33
+>RChevron        1  1  741  1  1 41752 OxMetrics9 19-05-2025 21:58:33
+>RCitigroup      1  1  741  1  1 47712 OxMetrics9 19-05-2025 21:58:33
+>RCocaCola       1  1  741  1  1 53672 OxMetrics9 19-05-2025 21:58:33
+>RUniversal      1  1  741  1  1 59632 OxMetrics9 19-05-2025 21:58:33
+>RWaltDisney     1  1  741  1  1 65592 OxMetrics9 19-05-2025 21:58:33
+>RNYSEComposite    1  1  741  1  1 71552 OxMetrics9 19-05-2025 21:58:33
+>CondVar_RChevron    1  1  741  1  1 77512 OxMetrics9 19-05-2025 21:58:33
+>CondVar_RCitigroup    1  1  741  1  1 83472 OxMetrics9 19-05-2025 21:58:33
+>CondVar_RCocaCola    1  1  741  1  1 89432 OxMetrics9 19-05-2025 21:58:33
+>CondVar_RNYSEComposite    1  1  741  1  1 95392 OxMetrics9 19-05-2025 21:58:33
+>COV_RChevron_RCitigroup    1  1  741  1  1 101352 OxMetrics9 19-05-2025 21:58:33
+>COV_RChevron_RCocaCola    1  1  741  1  1 107312 OxMetrics9 19-05-2025 21:58:33
+>COV_RChevron_RNYSEComposite    1  1  741  1  1 113272 OxMetrics9 19-05-2025 21:58:33
+>COV_RCitigroup_RCocaCola    1  1  741  1  1 119232 OxMetrics9 19-05-2025 21:58:33
+>COV_RCitigroup_RNYSEComposite    1  1  741  1  1 125192 OxMetrics9 19-05-2025 21:58:33
+>COV_RCocaCola_RNYSEComposite    1  1  741  1  1 131152 OxMetrics9 19-05-2025 21:58:33
+>beta_chevron    1  1  741  1  1 137112 OxMetrics9 19-05-2025 21:58:33
+>beta_citi       1  1  741  1  1 143072 OxMetrics9 19-05-2025 21:58:33
+>beta_CC         1  1  741  1  1 149032 OxMetrics9 19-05-2025 21:58:33
+>beta2_chevron    1  1  741  1  1 154992 OxMetrics9 19-05-2025 21:58:33
+>beta2_citi      1  1  741  1  1 160952 OxMetrics9 19-05-2025 21:58:33
+>beta2_cc        1  1  741  1  1 166912 OxMetrics9 19-05-2025 21:58:33
+>beta2_CC        1  1  741  1  1 172872 OxMetrics9 19-05-2025 21:58:33
