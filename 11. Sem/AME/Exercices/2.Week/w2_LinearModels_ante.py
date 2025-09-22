@@ -7,7 +7,6 @@ from tabulate import tabulate
 def estimate(y: np.ndarray, x: np.ndarray, transform='', N=None, T=None) -> dict:
     """Takes some np.arrays and estimates regular OLS, FE or FD.
     
-
     Args:
         y (np.ndarray): The dependent variable, needs to have the shape (n*t, 1)
         x (np.ndarray): The independent variable(s). If only one independent 
